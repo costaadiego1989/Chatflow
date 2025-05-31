@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: chatflow-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chatflow_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chatflow-network
+
+  postgres_test:
+    image: postgres:17
+    container_name: chatflow-postgres-test
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chatflow_test
+    networks:
+      - chatflow-network
+
+networks:
+  chatflow-network:
+    driver: bridge
+
+volumes:
+  postgres_data: 
