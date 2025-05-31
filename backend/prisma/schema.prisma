@@ -1,0 +1,101 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  LINK
+  AUDIO
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  avatar    String?
+  status    String?  @default("offline") // online, offline, away, busy
+  lastSeen  DateTime @default(now()) @map("last_seen")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relações
+  messages      Message[]
+  memberOfRooms RoomMember[]
+  createdRooms  Room[]     @relation("RoomCreator")
+
+  @@map("users")
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  avatar      String?
+  isPrivate   Boolean  @default(false) @map("is_private")
+  creatorId   String   @map("creator_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relações
+  messages Message[]
+  members  RoomMember[]
+  creator  User        @relation("RoomCreator", fields: [creatorId], references: [id])
+
+  @@map("rooms")
+}
+
+model RoomMember {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  roomId    String   @map("room_id")
+  role      String   @default("member") // admin, moderator, member
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relações
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+  @@map("room_members")
+}
+
+model Message {
+  id            String      @id @default(uuid())
+  content       String
+  type          MessageType @default(TEXT)
+  userId        String      @map("user_id")
+  roomId        String      @map("room_id")
+  mediaUrl      String?     @map("media_url")
+  linkPreview   String?     @map("link_preview")
+  replyToId     String?     @map("reply_to_id")
+  isRead        Boolean     @default(false) @map("is_read")
+  reactions     Json?       // Para armazenar emojis de reações
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  deletedAt     DateTime?   @map("deleted_at")
+  editedAt      DateTime?   @map("edited_at")
+
+  // Relações
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room    Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  replyTo Message? @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies Message[] @relation("MessageReplies")
+
+  @@map("messages")
+}
